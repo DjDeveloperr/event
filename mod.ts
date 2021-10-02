@@ -9,6 +9,7 @@ export class EventEmitter<E extends Record<string, unknown[]>> {
   #listeners: {
     [K in keyof E]?: Array<{
       once: boolean;
+      check: (...args: E[K]) => boolean;
       cb: (...args: E[K]) => void;
     }>;
   } = {};
@@ -37,6 +38,7 @@ export class EventEmitter<E extends Record<string, unknown[]>> {
   on<K extends keyof E>(
     eventName: K,
     listener?: (...args: E[K]) => void,
+    check?: (...args: E[K]) => boolean,
   ): this | AsyncIterableIterator<E[K]> {
     if (listener) {
       if (!this.#listeners[eventName]) {
@@ -49,6 +51,7 @@ export class EventEmitter<E extends Record<string, unknown[]>> {
       }
       this.#listeners[eventName]!.push({
         once: false,
+        check: check ?? (() => true),
         cb: listener,
       });
       return this;
@@ -82,6 +85,7 @@ export class EventEmitter<E extends Record<string, unknown[]>> {
   once<K extends keyof E>(
     eventName: K,
     listener?: (...args: E[K]) => void,
+    check?: (...args: E[K]) => boolean,
   ): this | Promise<E[K]> {
     if (!this.#listeners[eventName]) {
       this.#listeners[eventName] = [];
@@ -94,6 +98,7 @@ export class EventEmitter<E extends Record<string, unknown[]>> {
     if (listener) {
       this.#listeners[eventName]!.push({
         once: true,
+        check: check ?? (() => true),
         cb: listener,
       });
       return this;
@@ -101,6 +106,7 @@ export class EventEmitter<E extends Record<string, unknown[]>> {
       return new Promise((res) => {
         this.#listeners[eventName]!.push({
           once: true,
+          check: check ?? (() => true),
           cb: (...args) => res(args),
         });
       });
